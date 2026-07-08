@@ -1,33 +1,58 @@
+
 import streamlit as st
 import numpy as np
 import pickle
-import sklearn 
 
-# Load model and scaler
-model = pickle.load(open('diabetes_model.pkl', 'rb'))
-scaler = pickle.load(open('scaler.pkl', 'rb'))
+st.set_page_config(page_title="AI Diabetes Risk Prediction",page_icon="🩺",layout="wide")
 
-st.title("Diabetes Prediction App")
+st.markdown("""
+<style>
+.title{font-size:38px;font-weight:bold;color:#1565C0;}
+.footer{text-align:center;color:gray;}
+</style>
+""",unsafe_allow_html=True)
 
-st.write("Enter the following details to check diabetes risk:")
+@st.cache_resource
+def load():
+    return pickle.load(open("diabetes_model.pkl","rb")), pickle.load(open("scaler.pkl","rb"))
+model,scaler=load()
 
-# User input
-pregnancies = st.number_input('Pregnancies', min_value=0, max_value=20, value=1)
-glucose = st.number_input('Glucose Level', min_value=0, max_value=200, value=120)
-bp = st.number_input('Blood Pressure', min_value=0, max_value=140, value=70)
-skin_thickness = st.number_input('Skin Thickness', min_value=0, max_value=100, value=20)
-insulin = st.number_input('Insulin', min_value=0, max_value=900, value=80)
-bmi = st.number_input('BMI', min_value=0.0, max_value=70.0, value=25.0)
-dpf = st.number_input('Diabetes Pedigree Function', min_value=0.0, max_value=2.5, value=0.5)
-age = st.number_input('Age', min_value=10, max_value=100, value=33)
+st.sidebar.title("🏥 Project")
+st.sidebar.write("AI-Based Diabetes Risk Prediction")
 
-# Predict button
-if st.button('Predict'):
-    input_data = np.array([[pregnancies, glucose, bp, skin_thickness, insulin, bmi, dpf, age]])
-    input_scaled = scaler.transform(input_data)
-    prediction = model.predict(input_scaled)
-    
-    if prediction[0] == 1:
-        st.error('You are likely to have Diabetes.')
+st.markdown('<p class="title">🩺 AI-Based Diabetes Risk Prediction & Clinical Decision Support System</p>',unsafe_allow_html=True)
+patient=st.text_input("Patient Name")
+c1,c2=st.columns(2)
+with c1:
+    pregnancies=st.number_input("Pregnancies",0,20,1)
+    glucose=st.number_input("Glucose",0,250,120)
+    bp=st.number_input("Blood Pressure",0,150,70)
+    skin=st.number_input("Skin Thickness",0,100,20)
+with c2:
+    insulin=st.number_input("Insulin",0,900,80)
+    bmi=st.number_input("BMI",0.0,70.0,25.0)
+    dpf=st.number_input("Diabetes Pedigree Function",0.0,3.0,0.5)
+    age=st.number_input("Age",1,120,33)
+
+if st.button("🔍 Predict Diabetes Risk"):
+    x=np.array([[pregnancies,glucose,bp,skin,insulin,bmi,dpf,age]])
+    xs=scaler.transform(x)
+    pred=model.predict(xs)[0]
+    try:
+        prob=model.predict_proba(xs)[0][1]
+    except:
+        prob=float(pred)
+    if pred:
+        st.error("⚠️ High Risk of Diabetes")
     else:
-        st.success('You are unlikely to have Diabetes.')
+        st.success("✅ Low Risk of Diabetes")
+    st.metric("Risk Probability",f"{prob*100:.2f}%")
+    st.progress(float(prob))
+    st.subheader("Recommendations")
+    if pred:
+        st.write("- Consult a doctor\n- Exercise regularly\n- Maintain healthy diet")
+    else:
+        st.write("- Continue healthy lifestyle\n- Annual check-up")
+    st.write(f"Patient: {patient or 'N/A'} | Age: {age} | BMI: {bmi}")
+st.markdown("---")
+st.markdown('<div class="footer">Developed using Streamlit</div>',unsafe_allow_html=True)
